@@ -1,38 +1,49 @@
 #!/bin/bash
 
 username="$(logname)"
+username=${username:-$SUDO_USER}
 
 # Check for sudo
 if [ "$EUID" -ne 0 ]; then
-  echo "This script must be run with sudo."
-  exit 1
-fi
-
-# Check if nvidia-inst is installed
-# If it is, do the Nvidia stuff
-if pacman -Qq nvidia-inst 2>/dev/null | grep -q .; then
-  echo "Adding the --unsupported-gpu flag to the sway call in greetd.conf..."
-  sed -i 's|sway -c|sway --unsupported-gpu -c|' etc/greetd/greetd.conf
-  echo "Adding a custom desktop file for Nvidia sessions..."
-  mkdir -p /usr/share/wayland-sessions
-  cat <<EOF >/usr/share/wayland-sessions/sway-nvidia.desktop
-[Desktop Entry]
-Name=Sway-Nvidia
-Comment=Sway with Nvidia
-Exec=sway --unsupported-gpu
-Type=Application
-EOF
-  echo "Adding dracut config for early module loading..."
-  cat <<EOF >/etc/dracut.conf.d/nvidia-modules.conf
-force_drivers+=" nvidia nvidia_modeset nvidia_uvm nvidia_drm "
-EOF
-  echo "Regenerating initrds..."
-  reinstall-kernels || dracut-rebuild
+    echo "This script must be run with sudo."
+    exit 1
 fi
 
 # Install the custom package list
 echo "Installing needed packages..."
-pacman -S --noconfirm --noprogressbar --needed --disable-download-timeout $(<packages-repository.txt)
+# Check if the os-release file exists
+if [ -f /etc/os-release ]; then
+    # Source the file to load the $ID variable
+    . /etc/os-release
+
+    case "$ID" in
+    debian)
+        echo "Detected Debian."
+        apt install $(grep -vE '^#' packages-repository_debian.txt)
+        ./install-awesome-terminal-font.sh
+        ./install-fonts-ext.sh
+        ./install-nwg.sh
+        ./install-qogir.sh
+        ./install-walker.sh
+        ./install-vicinae.sh
+        ;;
+    ubuntu)
+        echo "Detected Ubuntu."
+        echo "untested" >&2
+        exit 1
+        ;;
+    arch)
+        echo "Detected Arch Linux."
+        pacman -S --noconfirm --noprogressbar --needed --disable-download-timeout $(grep -v '^#' packages-repository.txt)
+        ;;
+    *)
+        echo "Current distribution ($ID) is not explicitly supported."
+        ;;
+    esac
+else
+    echo "Critical: Could not determine the Linux distribution (/etc/os-release missing)."
+    exit 1
+fi
 
 # Deploy user configs
 echo "Deploying user configs..."
@@ -46,20 +57,39 @@ chown -R "${username}:${username}" "/home/${username}"
 echo "Deploying system configs..."
 rsync -a --chown=root:root etc/ /etc/
 
-# Check if the script is running in a virtual machine
-if systemd-detect-virt | grep -vq "none"; then
-  echo "Virtual machine detected; enabling WLR_RENDERER_ALLOW_SOFTWARE variable in ReGreet config..."
-  # Uncomment WLR_RENDERER_ALLOW_SOFTWARE variable in ReGreet config
-  sed -i '/^#WLR_RENDERER_ALLOW_SOFTWARE/s/^#//' /etc/greetd/regreet.toml
-fi
-
-# Enable the Greetd service
-echo "Enabling the Greetd service..."
-systemctl -f enable greetd.service
-
 # Remove the repo
 echo "Removing the EOS Community Sway repo..."
 rm -rf ../sway
 
-echo "Installation complete."
+# Install sway-wsl2
+git clone https://github.com/jordankoehn/sway-wsl2.git /tmp/sway-wsl2
+cd /tmp/sway-wsl2
+./install.sh
 
+# Leverage omarchy themes
+git clone --branch v3.8.1 https://github.com/basecamp/omarchy.git ~/.local/share/omarchy
+echo 'source $HOME/.local/share/omarchy/default/bash/rc' >>~/.bashrc
+source ~/.bashrc
+mkdir -p /home/dev/.config/omarchy/theme
+
+username=$USER
+omarchy_configs=("btop" "chromium" "fontconfig" "foot" "git" "ghostty" "kitty" "lazygit" "omarchy" "tmux" "chromium-flags.conf")
+for _path in "${omarchy_configs[@]}"; do
+    _source_path=$OMARCHY_PATH/config/$_path
+    if [[ -d $_source_path ]]; then
+        rsync -a $_source_path/ "/home/${username}/.config/$_path/"
+    else
+        rsync -a $_source_path "/home/${username}/.config/$_path"
+    fi
+done
+
+mkdir -p ~/.config/environment.d
+echo "MOZ_ENABLE_WAYLAND=1" >~/.config/environment.d/omarchy-firefox-wayland.conf
+cp -f "$OMARCHY_PATH/default/firefox/policies.json" "/usr/lib/firefox/distribution/policies.json"
+cat << EOF > "/home/${username}/.config/elephant/symbols.toml"
+command = 'wl-copy && swaymsg exec "wtype -M shift -k Insert -m shift"'
+EOF
+# Restore user ownership
+chown -R "${username}:${username}" "/home/${username}"
+
+echo "Installation complete."

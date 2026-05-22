@@ -1,5 +1,5 @@
-# Logo key. Use Mod1 for Alt.
-set $mod Mod4
+# NumLock key (use powertoys or regedit). Use Mod1 for Alt.
+set $mod Mod2
 
 # Add Vim key support
 set $left h
@@ -11,10 +11,8 @@ set $right l
 set $term footclient
 
 # Application launcher
-set $launcher fuzzel
-
-# Application menu
-set $menu nwg-drawer
+set $launcher omarchy-launch-walker
+set $clipboard omarchy-launch-walker -m clipboard
 
 # Power Menu
 set $powermenu ~/.config/sway/scripts/power_menu.sh
@@ -30,16 +28,10 @@ set $powermenu ~/.config/sway/scripts/power_menu.sh
     bindsym $mod+Shift+e exec $powermenu
 
     # Kill focused window
-    bindsym $mod+q kill
+    bindsym $mod+Shift+q kill
 
     # Start your launcher
-    bindsym $mod+d exec $launcher
-
-    # Menu
-    bindsym $mod+Shift+d exec $menu
-
-    # Lock screen
-    bindsym $mod+f1 exec gtklock
+    bindsym $mod+space exec $launcher
 
     # Activities
     bindsym $mod+p exec ~/.config/sway/scripts/window_switcher.sh
@@ -52,6 +44,15 @@ set $powermenu ~/.config/sway/scripts/power_menu.sh
     # Reload the configuration file
     bindsym $mod+Shift+c reload
 
+    # Global clipboard
+    # Universal Copy
+    bindsym $mod+c exec wtype -M ctrl -k Insert -m ctrl
+    # Universal Paste
+    bindsym $mod+v exec wtype -M shift -k Insert -m shift 
+    # Universal Cut
+    bindsym $mod+x exec wtype -M ctrl -k x -m ctrl
+    # Clipboard manager
+    bindsym $mod+Control+v exec $clipboard
 #
 # Moving around:
 #
@@ -119,26 +120,26 @@ set $powermenu ~/.config/sway/scripts/power_menu.sh
 #
     # Set how the current window will be split
     # Split the window vertically
-    bindsym $mod+v splitv
+    #bindsym $mod+v splitv
     # Split the window horizontally
-    bindsym $mod+b splith
+    #bindsym $mod+b splith
 
     # Switch the current container between different layout styles
-    bindsym $mod+s layout stacking
-    bindsym $mod+w layout tabbed
-    bindsym $mod+e layout toggle split
+    #bindsym $mod+s layout stacking
+    #bindsym $mod+w layout tabbed
+    #bindsym $mod+e layout toggle split
 
     # Make the current focus fullscreen
     bindsym $mod+f fullscreen
 
     # Toggle between tiling and floating mode
-    bindsym $mod+Shift+space floating toggle
+    # bindsym $mod+Shift+space floating toggle
 
     # Swap focus between the tiling area and the floating area
-    bindsym $mod+space focus mode_toggle
+    # bindsym $mod+space focus mode_toggle
 
     # Move focus to the parent container
-    bindsym $mod+a focus parent
+    #bindsym $mod+a focus parent
 
 #
 # Scratchpad:
@@ -180,46 +181,24 @@ set $powermenu ~/.config/sway/scripts/power_menu.sh
     }
 
 #
-# Media Keys
-#
-    bindsym {
-        # Volume
-        XF86AudioRaiseVolume exec pamixer -ui 2
-        XF86AudioLowerVolume exec pamixer -ud 2
-        XF86AudioMute exec pamixer --toggle-mute
-
-        # Player
-        XF86AudioPlay exec playerctl play-pause
-        XF86AudioNext exec playerctl next
-        XF86AudioPrev exec playerctl previous
-
-        # Backlight
-        XF86MonBrightnessUp exec brightnessctl -c backlight set +5%
-        XF86MonBrightnessDown exec brightnessctl -c backlight set 5%-
-    }
-
-#
 # App shortcuts
 #
     # Launch the file explorer
-    bindsym $mod+n exec thunar
+    bindsym $mod+e exec thunar
 
     # Launch the browser
-    bindsym $mod+o exec firefox
-
-    # Launch the clipboard manager
-    bindsym $mod+Ctrl+v exec cliphist list | fuzzel -d -w 90 -l 30 -p "Select an entry to copy it to your clipboard buffer:"| cliphist decode | wl-copy
-    # Delete an entry from the clipboard manager
-    bindsym $mod+Ctrl+x exec cliphist list | fuzzel -d -w 90 -l 30 -t cc9393ff -S cc9393ff -p "Select an entry to delete it from cliphist:"| cliphist delete
-    # Note: you can clear all cliphist entries by running `cliphist wipe`
+    bindsym $mod+b exec firefox
 
 #
 # Screenshots
 #
     # Snip a selection and pipe to swappy
     bindsym print exec grim -g "$(slurp)" - | swappy -f -
+    bindsym $mod+s exec grim -g "$(slurp)" - | swappy -f -
     # Screenshot a window and pipe to swappy
     bindsym Ctrl+Print exec ~/.config/sway/scripts/screenshot_window.sh
+    bindsym $mod+Ctrl+s exec ~/.config/sway/scripts/screenshot_window.sh
     # Screenshot the current display and pipe to swappy
     bindsym Shift+Print exec ~/.config/sway/scripts/screenshot_display.sh
+    bindsym $mod+Shift+s exec ~/.config/sway/scripts/screenshot_display.sh
 
